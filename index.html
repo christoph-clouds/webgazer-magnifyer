@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+    </head>
+        <meta charset="utf-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>Magnifying Glass</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="styles.css">
+    <head>
+    <body>
+        <div class="imageContainer">
+            <img id="waldo" src="https://static.techspot.com/images2/news/bigimage/2018/08/2018-08-13-image-14.jpg" alt="where is waldo"/>
+        </div>
+        <script src="./webgazer.js"></script>
+        <script>
+            function magnify(imgID, zoom) {
+                var img, glass, w, h, bw;
+                img = document.getElementById(imgID);
+
+                /* Create magnifier glass: */
+                glass = document.createElement("DIV");
+                glass.setAttribute("class", "img-magnifier-glass");
+                glass.setAttribute("id", "img-magnifier-glass-id");
+
+                var indicator = document.createElement("DIV");
+                indicator.setAttribute("id", "average-indicator");
+
+                /* Insert magnifier glass: */
+                img.parentElement.insertBefore(glass, img);
+
+                /* Set background properties for the magnifier glass: */
+                glass.style.backgroundImage = "url('" + img.src + "')";
+                glass.style.backgroundRepeat = "no-repeat";
+                glass.style.backgroundSize = (img.width * zoom) + "px " + (img.height * zoom) + "px";
+                bw = 3;
+                w = glass.offsetWidth / 2;
+                h = glass.offsetHeight / 2;
+            }   
+        
+            magnify("waldo", 2);
+        
+
+            const collisionSVG = "collisionSVG";
+            var force = [];
+            var nodes = [];
+
+            var positionX = 0;
+            var positionY = 0;
+
+
+            var averageX = 0;
+            var averageY = 0;
+            var positionsX = [];
+            var positionsY = [];
+            
+            window.onload = function() {
+            
+                var localstorageLabel = 'webgazerGlobalData';
+                window.localStorage.setItem(localstorageLabel, null);
+            
+                webgazer.setRegression('ridge') /* currently must set regression and tracker */
+                .setTracker('clmtrackr')
+                .begin()
+                .showPredictionPoints(false); /* shows a square every 100 milliseconds where current prediction is */
+            
+                function checkIfReady() {
+                var feedbackBox = document.getElementById( webgazer.params.faceFeedbackBoxId );
+                
+                if (!webgazer.isReady()) {
+                    setTimeout(checkIfReady, 100);
+                }
+                // This isn't strictly necessary, but it makes the DOM easier to read
+                // to have the z draw order reflect the DOM order.
+                else if( typeof(feedbackBox) == 'undefined' || feedbackBox == null ) {
+                    setTimeout(checkIfReady, 100);
+                }
+                else
+                {
+                    // Add the SVG component on the top of everything.
+                    webgazer.setGazeListener( collisionEyeListener );
+                    
+                }
+                }
+            
+                setTimeout(checkIfReady,100);
+            };
+            
+            window.onbeforeunload = function() {
+                //webgazer.end(); //Uncomment if you want to save the data even if you reload the page.
+                window.localStorage.clear(); //Comment out if you want to save data across different sessions
+            }
+            
+            
+            
+            var collisionEyeListener = function(data, clock) {
+                if(!data)
+                return;
+
+
+                moveMagnifierToEyePosition(data.x, data.y);
+            }
+
+            function moveMagnifierToEyePosition(x, y) {
+                //console.log("moving");
+                var img = document.getElementById("waldo");
+                var glass = document.getElementById("img-magnifier-glass-id");
+
+                var moveToNewAverage = findNewAverage(x, y);
+                if(moveToNewAverage) {
+                    x = averageX;
+                    y = averageY;
+                    console.log("new average");
+                    console.log(averageX, averageY);
+                }
+                else {
+                    console.log("old average");
+                    console.log(averageX, averageY);
+                    return;
+                } 
+
+                var zoom = 2;
+                var bw = 3;
+                var w = glass.offsetWidth / 2;
+                var h = glass.offsetHeight / 2;
+                
+                
+                /* Prevent the magnifier glass from being positioned outside the image: */
+                if (x > img.width - (w / zoom)) {x = img.width - (w / zoom);}
+                if (x < w / zoom) {x = w / zoom;}
+                if (y > img.height - (h / zoom)) {y = img.height - (h / zoom);}
+                if (y < h / zoom) {y = h / zoom;}
+                /* Set the position of the magnifier glass: */
+                //glass.style.left = (x - w) + "px";
+                //glass.style.top = (y - h) + "px";
+                glass.style.transform = "translate(" + (x - w) + "px," + (y - h) + "px)";
+                
+
+                /* Display what the magnifier glass "sees": */
+                glass.style.backgroundPosition = "-" + ((x * zoom) - w + bw) + "px -" + ((y * zoom) - h + bw) + "px";
+            }
+
+            function findNewAverage(x, y) {
+                var n = 30;
+                var minimalDistance = 50;
+                var newAverageX;
+                var newAverageY;
+
+                if(positionsX.length < n) {    
+                    positionsX.push(x);
+                    positionsY.push(y);
+                    return;
+                }
+
+                positionsX.shift();
+                positionsY.shift();
+
+                newAverageX = Math.round(positionsX.reduce(getSum) / n);
+                newAverageY = Math.round(positionsY.reduce(getSum) / n);
+
+                //console.log(newAverageX + " x, " + newAverageY + " y");
+                
+                if(averageX === 0 && averageY === 0) {
+                    averageX = newAverageX;
+                    averageY = newAverageY;
+                    return true;
+                }
+
+                var xDiff = averageX - newAverageX;
+                var yDiff = averageY - newAverageY;
+                var distance = Math.sqrt(Math.pow(xDiff, 2) + Math.pow(yDiff, 2));
+
+                console.log(distance);
+                if(distance > minimalDistance) {
+                    averageX = newAverageX;
+                    averageY = newAverageY;
+                    return true;
+                }
+
+
+                return false;
+            }
+
+            function getSum(sum, val){
+                return (sum + val);
+            } 
+        </script>
+    </body>    
+</html>

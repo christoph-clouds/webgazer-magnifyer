@@ -1,0 +1,27 @@
+#waldo {
+    width: 100%;
+    height: 100vh;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+}
+
+.imageContainer {
+    position: relative;
+}
+
+.img-magnifier-glass {
+    position: absolute;
+    border: 3px solid #000;
+    cursor: none;
+    /*Set the size of the magnifier glass:*/
+    width: 250px;
+    height: 250px;
+    transition: 0.1s ease-in-out;
+  }
+
+#average-indicator {
+
+}
